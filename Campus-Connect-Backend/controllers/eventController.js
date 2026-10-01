@@ -3,7 +3,9 @@ const Event = require('../models/Event');
 // GET /api/events (open to all authenticated users & frontend)
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find().sort({ date: 1 });
+    const events = await Event.findAll({
+      order: [['date', 'ASC']]
+    });
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,7 +25,7 @@ exports.createEvent = async (req, res) => {
       date,
       description: description || 'Added via portal',
       department: department || req.user?.department || 'Information Technology',
-      created_by: req.user?._id || null
+      created_by: req.user?.id || req.user?._id || null
     });
     res.status(201).json(event);
   } catch (err) {

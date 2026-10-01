@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const Assignment = require('../models/Assignment');
 
 // Get classes schedule
@@ -16,11 +17,17 @@ exports.getPendingAssignments = async (req, res) => {
   try {
     const division = (req.user?.division || req.query.division || 'A').toUpperCase();
     const now = new Date();
-    // Fetch upcoming assignments
-    const assignments = await Assignment.find({
-      division,
-      due_date: { $gte: new Date(now.setHours(0, 0, 0, 0)) }
-    }).sort({ due_date: 1 });
+    now.setHours(0, 0, 0, 0);
+
+    const assignments = await Assignment.findAll({
+      where: {
+        division,
+        due_date: {
+          [Op.gte]: now
+        }
+      },
+      order: [['due_date', 'ASC']]
+    });
     res.json(assignments);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -30,7 +37,9 @@ exports.getPendingAssignments = async (req, res) => {
 // All assignments (Direct frontend compatibility)
 exports.getAllAssignments = async (req, res) => {
   try {
-    const assignments = await Assignment.find().sort({ due_date: 1 });
+    const assignments = await Assignment.findAll({
+      order: [['due_date', 'ASC']]
+    });
     res.json(assignments);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -51,7 +60,7 @@ exports.createAssignment = async (req, res) => {
       due_date,
       division: (division || req.user?.division || 'A').toUpperCase(),
       department: department || req.user?.department || 'Information Technology',
-      professor: req.user?._id || null
+      professor: req.user?.id || req.user?._id || null
     });
     res.status(201).json(assignment);
   } catch (error) {

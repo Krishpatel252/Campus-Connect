@@ -13,7 +13,7 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Name, email and password are required' });
     }
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ where: { email } });
     if (existing) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -28,13 +28,13 @@ exports.registerUser = async (req, res) => {
     });
 
     res.status(201).json({
-      _id: user._id,
+      _id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
       department: user.department,
       division: user.division,
-      token: generateToken(user._id)
+      token: generateToken(user.id)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -48,16 +48,16 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email } });
     if (user && (await user.matchPassword(password))) {
       res.json({
-        _id: user._id,
+        _id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
         department: user.department,
         division: user.division,
-        token: generateToken(user._id)
+        token: generateToken(user.id)
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -69,7 +69,9 @@ exports.loginUser = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password'] }
+    });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (error) {

@@ -1,17 +1,48 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const resourceSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true },
-  file_path: { type: String, required: true },
-  department: { type: String, default: 'Information Technology' },
-  subject: { type: String, default: 'General' },
-  uploaded_by: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User',
-    required: false
+const Resource = sequelize.define('Resource', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
-  uploaded_by_name: { type: String, default: 'Faculty' },
-  timestamp: { type: Date, default: Date.now }
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  file_path: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  department: {
+    type: DataTypes.STRING,
+    defaultValue: 'Information Technology'
+  },
+  subject: {
+    type: DataTypes.STRING,
+    defaultValue: 'General'
+  },
+  uploaded_by: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  uploaded_by_name: {
+    type: DataTypes.STRING,
+    defaultValue: 'Faculty'
+  },
+  timestamp: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Resource', resourceSchema);
+Resource.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
+
+module.exports = Resource;

@@ -1,21 +1,48 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const messageSchema = new mongoose.Schema({
-  sender: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User',
-    required: false
+const Message = sequelize.define('Message', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
-  sender_name: { type: String, default: 'User' },
-  channel: { 
-    type: String, 
-    enum: ['general', 'division'], 
-    default: 'general' 
+  sender: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
-  department: { type: String, default: 'Information Technology' },
-  division: { type: String, uppercase: true, default: 'A' },
-  content: { type: String, required: true, trim: true },
-  timestamp: { type: Date, default: Date.now }
+  sender_name: {
+    type: DataTypes.STRING,
+    defaultValue: 'User'
+  },
+  channel: {
+    type: DataTypes.ENUM('general', 'division'),
+    defaultValue: 'general'
+  },
+  department: {
+    type: DataTypes.STRING,
+    defaultValue: 'Information Technology'
+  },
+  division: {
+    type: DataTypes.STRING,
+    defaultValue: 'A'
+  },
+  content: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  timestamp: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  timestamps: false
 });
 
-module.exports = mongoose.model('Message', messageSchema);
+Message.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
+
+module.exports = Message;

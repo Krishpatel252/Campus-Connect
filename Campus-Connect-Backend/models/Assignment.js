@@ -1,16 +1,44 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const assignmentSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true },
-  description: { type: String, default: 'Added via portal' },
-  due_date: { type: Date, required: true },
-  department: { type: String, default: 'Information Technology' },
-  division: { type: String, uppercase: true, default: 'A' },
-  professor: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: false 
+const Assignment = sequelize.define('Assignment', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  description: {
+    type: DataTypes.TEXT,
+    defaultValue: 'Added via portal'
+  },
+  due_date: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  department: {
+    type: DataTypes.STRING,
+    defaultValue: 'Information Technology'
+  },
+  division: {
+    type: DataTypes.STRING,
+    defaultValue: 'A'
+  },
+  professor: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
-module.exports = mongoose.model('Assignment', assignmentSchema);
+Assignment.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+  values._id = values.id;
+  return values;
+};
+
+module.exports = Assignment;

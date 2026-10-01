@@ -3,7 +3,11 @@ const Message = require('../models/Message');
 // GET /api/chat/general & /api/social/messages/general
 exports.getGeneralMessages = async (req, res) => {
   try {
-    const messages = await Message.find({ channel: 'general' }).sort({ timestamp: 1 }).limit(100);
+    const messages = await Message.findAll({
+      where: { channel: 'general' },
+      order: [['timestamp', 'ASC']],
+      limit: 100
+    });
     res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -14,7 +18,14 @@ exports.getGeneralMessages = async (req, res) => {
 exports.getDivisionMessages = async (req, res) => {
   try {
     const division = (req.params.divId || req.query.division || req.user?.division || 'A').toUpperCase();
-    const messages = await Message.find({ channel: 'division', division }).sort({ timestamp: 1 }).limit(100);
+    const messages = await Message.findAll({
+      where: {
+        channel: 'division',
+        division
+      },
+      order: [['timestamp', 'ASC']],
+      limit: 100
+    });
     res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -31,8 +42,9 @@ exports.postMessage = async (req, res) => {
       content,
       channel: channel || 'general',
       division: (division || req.user?.division || 'A').toUpperCase(),
-      sender: req.user?._id || (typeof sender_id === 'string' && sender_id.length === 24 ? sender_id : null),
-      sender_name: req.user?.name || sender_name || 'Krish Patel'
+      sender: req.user?.id || req.user?._id || (typeof sender_id === 'number' || (typeof sender_id === 'string' && !isNaN(sender_id)) ? parseInt(sender_id, 10) : null),
+      sender_name: req.user?.name || sender_name || 'Krish Patel',
+      timestamp: new Date()
     });
 
     res.status(201).json(message);

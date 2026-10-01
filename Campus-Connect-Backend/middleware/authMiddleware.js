@@ -9,10 +9,11 @@ const protect = async (req, res, next) => {
 
   if (!token) {
     // Check if request carries simulated test user/role (supports frontend test mode)
-    const simulatedId = req.headers['x-user-id'] || req.body.professor_id || req.body.created_by || req.body.sender_id || req.body.uploaded_by;
+    const simulatedId = req.headers['x-user-id'] || req.body?.professor_id || req.body?.created_by || req.body?.sender_id || req.body?.uploaded_by;
     if (simulatedId) {
-      if (typeof simulatedId === 'string' && simulatedId.length === 24) {
-        req.user = await User.findById(simulatedId);
+      const parsedId = parseInt(simulatedId, 10);
+      if (!isNaN(parsedId)) {
+        req.user = await User.findByPk(parsedId);
       }
     }
     if (!req.user) {
@@ -23,7 +24,9 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'campusconnect_super_secret_jwt_key_2026');
-    req.user = await User.findById(decoded.id).select('-password');
+    req.user = await User.findByPk(decoded.id, {
+      attributes: { exclude: ['password'] }
+    });
     if (!req.user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -42,7 +45,9 @@ const optionalProtect = async (req, res, next) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'campusconnect_super_secret_jwt_key_2026');
-      req.user = await User.findById(decoded.id).select('-password');
+      req.user = await User.findByPk(decoded.id, {
+        attributes: { exclude: ['password'] }
+      });
     } catch (e) {
       // Ignore token failure for optional endpoints
     }

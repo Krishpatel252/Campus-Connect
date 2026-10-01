@@ -5,13 +5,13 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const connectDB = require('./config/db');
+const { connectDB } = require('./config/db');
 const Message = require('./models/Message');
 
 const app = express();
 const server = http.createServer(app);
 
-// Connect to MongoDB
+// Connect and Sync MySQL Database
 connectDB();
 
 // Setup Socket.io with CORS
@@ -30,13 +30,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Basic Health Check Route
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'success', message: 'Campus Connect API is running' });
+  res.status(200).json({ status: 'success', message: 'Campus Connect API is running with MySQL' });
 });
 
 // Modular Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/dashboard', require('./routes/userRoutes')); // Dashboard alias
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/academics', require('./routes/academicRoutes'));
 app.use('/api/social', require('./routes/socialRoutes'));
 app.use('/api/chat', require('./routes/socialRoutes')); // Social Hub / Chat alias
@@ -45,13 +45,11 @@ app.use('/api/resources', require('./routes/resourceRoutes'));
 
 // ---------------------------------------------------------------------
 // Real-time Communication with Socket.io
-// Distinct rooms for: "General Department Room" & "Special Division Room"
 // ---------------------------------------------------------------------
 io.on('connection', (socket) => {
   console.log(`Socket client connected: ${socket.id}`);
 
-  // Event to join room
-  // room can be: "general" or "division_A" / "division_B"
+  // Event to join room ("general" or "division_A", etc.)
   socket.on('joinRoom', ({ room }) => {
     socket.join(room);
     console.log(`Socket ${socket.id} joined room: ${room}`);
@@ -68,13 +66,15 @@ io.on('connection', (socket) => {
     try {
       const { room, sender_id, sender_name, content, channel, division, department } = data;
       
+      const parsedSenderId = parseInt(sender_id, 10);
       const savedMsg = await Message.create({
         content,
         channel: channel || (room && room.startsWith('division') ? 'division' : 'general'),
         division: (division || 'A').toUpperCase(),
         department: department || 'Information Technology',
-        sender: (typeof sender_id === 'string' && sender_id.length === 24) ? sender_id : null,
-        sender_name: sender_name || 'User'
+        sender: !isNaN(parsedSenderId) ? parsedSenderId : null,
+        sender_name: sender_name || 'User',
+        timestamp: new Date()
       });
 
       // Broadcast message to everyone in that room
