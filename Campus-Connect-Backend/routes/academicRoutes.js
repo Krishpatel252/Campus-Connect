@@ -1,29 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/db');
+const { getClasses, getPendingAssignments, getAllAssignments, createAssignment } = require('../controllers/academicController');
+const { optionalProtect, authorize } = require('../middleware/authMiddleware');
 
-// Get all assignments
-router.get('/assignments', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM assignments ORDER BY due_date ASC');
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// GET /api/academics/classes
+router.get('/classes', optionalProtect, getClasses);
 
-// Professor adding an assignment
-router.post('/assignments', async (req, res) => {
-    const { title, description, due_date, professor_id } = req.body;
-    try {
-        const [result] = await pool.query(
-            'INSERT INTO assignments (title, description, due_date, professor_id) VALUES (?, ?, ?, ?)',
-            [title, description, due_date, professor_id]
-        );
-        res.status(201).json({ id: result.insertId, title, description, due_date });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// GET /api/academics/assignments/pending
+router.get('/assignments/pending', optionalProtect, getPendingAssignments);
+
+// GET /api/academics/assignments (frontend compatibility)
+router.get('/assignments', optionalProtect, getAllAssignments);
+
+// POST /api/academics/assignments (Professors only)
+router.post('/assignments', optionalProtect, authorize('professor'), createAssignment);
 
 module.exports = router;

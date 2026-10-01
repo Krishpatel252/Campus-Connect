@@ -1,51 +1,39 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/db');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+const { getResources, uploadResource } = require('../controllers/resourceController');
+const { optionalProtect } = require('../middleware/authMiddleware');
 
-// Configure Multer for file uploads
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer disk storage configuration
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Ensure an 'uploads' folder exists in your root directory
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage: storage });
-
-// Get all resources
-router.get('/', async (req, res) => {
-    try {
-        const [rows] = await pool.query(`
-            SELECT r.*, u.name as uploaded_by_name 
-            FROM resources r 
-            JOIN users u ON r.uploaded_by = u.id 
-            ORDER BY r.timestamp DESC
-        `);
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    cb(null, `${Date.now()}_${base}${ext}`);
+  }
 });
 
-// Upload a resource (PDF, etc.)
-router.post('/', upload.single('file'), async (req, res) => {
-    const { title, uploaded_by } = req.body;
-    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
-
-    if (!file_path) return res.status(400).json({ message: 'File upload failed' });
-
-    try {
-        const [result] = await pool.query(
-            'INSERT INTO resources (title, file_path, uploaded_by) VALUES (?, ?, ?)',
-            [title, file_path, uploaded_by]
-        );
-        res.status(201).json({ id: result.insertId, title, file_path });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+const upload = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 } // 25MB
 });
+
+// GET /api/resources
+router.get('/', optionalProtect, getResources);
+
+// POST /api/resources/upload and /api/resources
+router.post('/upload', optionalProtect, upload.single('file'), uploadResource);
+router.post('/', optionalProtect, upload.single('file'), uploadResource);
 
 module.exports = router;
