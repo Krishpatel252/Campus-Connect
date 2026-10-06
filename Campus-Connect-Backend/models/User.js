@@ -24,6 +24,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  enrollment: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true
+  },
   role: {
     type: DataTypes.ENUM('student', 'cr', 'professor'),
     defaultValue: 'student'
